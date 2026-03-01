@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 
-use solana_keypair::Keypair;
-use solana_signer::Signer;
 use solana_instruction::{AccountMeta, Instruction};
-use solana_transaction::Transaction;
+use solana_keypair::Keypair;
 use solana_program::hash;
+use solana_signer::Signer;
+use solana_transaction::Transaction;
 
 use litesvm::LiteSVM;
 
@@ -14,7 +14,8 @@ fn test_initialize_poll() {
 
     let program_id = crate::ID;
     let program_bytes = include_bytes!("../../../target/deploy/anchor_voting_dapp.so");
-    svm.add_program(program_id, program_bytes).expect("add_program");
+    svm.add_program(program_id, program_bytes)
+        .expect("add_program");
 
     let payer = Keypair::new();
     svm.airdrop(&payer.pubkey(), 10_000_000_000).unwrap();
@@ -25,10 +26,7 @@ fn test_initialize_poll() {
     let poll_end: u64 = u64::MAX;
 
     // Derive the poll PDA — seeds = [poll_id.to_le_bytes()]
-    let (poll_pda, _bump) = Pubkey::find_program_address(
-        &[&poll_id.to_le_bytes()],
-        &program_id,
-    );
+    let (poll_pda, _bump) = Pubkey::find_program_address(&[&poll_id.to_le_bytes()], &program_id);
 
     // Anchor instruction data: 8-byte discriminator + borsh-encoded args
     let discriminator = &hash::hash(b"global:initialize_poll").to_bytes()[..8];
@@ -45,8 +43,8 @@ fn test_initialize_poll() {
     let instruction = Instruction {
         program_id,
         accounts: vec![
-            AccountMeta::new(payer.pubkey(), true),           // signer
-            AccountMeta::new(poll_pda, false),                // poll PDA
+            AccountMeta::new(payer.pubkey(), true), // signer
+            AccountMeta::new(poll_pda, false),      // poll PDA
             AccountMeta::new_readonly(system_program_id, false),
         ],
         data,
@@ -82,8 +80,8 @@ fn test_initialize_poll() {
     let close_ix = Instruction {
         program_id,
         accounts: vec![
-            AccountMeta::new(payer.pubkey(), true),  // signer (receives lamports)
-            AccountMeta::new(poll_pda, false),       // poll PDA to close
+            AccountMeta::new(payer.pubkey(), true), // signer (receives lamports)
+            AccountMeta::new(poll_pda, false),      // poll PDA to close
         ],
         data: close_data,
     };
@@ -97,5 +95,8 @@ fn test_initialize_poll() {
     let result = svm.send_transaction(close_tx).unwrap();
     println!("Close transaction logs: {:?}", result.logs);
 
-    assert!(svm.get_account(&poll_pda).is_none(), "poll account should be closed");
+    assert!(
+        svm.get_account(&poll_pda).is_none(),
+        "poll account should be closed"
+    );
 }
